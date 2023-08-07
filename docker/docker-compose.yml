@@ -1,0 +1,61 @@
+version: "3.8"
+services:
+  mongodb:
+    image: mongo
+    container_name: mongodb-dev
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=leeparayno
+      - MONGO_INITDB_ROOT_PASSWORD=n10SCheart
+    volumes:
+      - type: volume
+        source: mongodb-data
+        target: /data/db
+      - type: volume
+        source: mongodb-conf
+        target: /etc
+      - ./mongod.conf:/etc/mongod.conf
+    networks:
+      - mongodb_network
+    ports:
+      - 27017:27017
+    # "--config","/etc/mongod.conf",
+    #,"--bind_ip","127.0.0.1"
+    entrypoint: ["mongod","--setParameter","localLogicalSessionTimeoutMinutes=120","--bind_ip_all"]
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongo 10.10.10.60:27017/test --quiet
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+  mongo-express:
+    image: mongo-express
+    container_name: mongo-express
+    environment:
+      - ME_CONFIG_MONGODB_SERVER=mongodb
+      - ME_CONFIG_MONGODB_ENABLE_ADMIN=true
+      - ME_CONFIG_MONGODB_ADMINUSERNAME=dba_admin
+      - ME_CONFIG_MONGODB_ADMINPASSWORD=cur0t_adm1n
+      - ME_CONFIG_BASICAUTH_USERNAME=admin
+      - ME_CONFIG_BASICAUTH_PASSWORD=admin123
+    volumes:
+      - type: volume
+        source: mongodb-data
+        target: /data/db
+    depends_on:
+      - mongodb
+    networks:
+      - mongodb_network
+    ports:
+      - 8081:8081
+    healthcheck:
+      test:  wget --quiet --tries=3 --spider http://admin:admin123@10.10.10.60:8081 || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+volumes:
+  mongodb-data: 
+  mongodb-conf:
+networks:
+  mongodb_network:
+    name: mongodb_network

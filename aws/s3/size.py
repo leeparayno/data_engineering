@@ -1,0 +1,1 @@
+print(str(pow(4, 11)))
